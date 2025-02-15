@@ -1,9 +1,9 @@
 {
-  "name": "text-enhancement-ui",
+  "name": "text-enhancement-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://andrepat0.github.io/text-enhancement-app",
+  "homepage": "https://andrepat0.github.io/text-enhancement-app/",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
