@@ -58,6 +58,7 @@ export interface RevisionHistoryItem {
     theme: string;
     autoSaveInterval: number;
     keyboardShortcuts: boolean;
+    autoSaveEnabled: boolean;
   }
   
   export const DEFAULT_SETTINGS: Settings = {
@@ -80,6 +81,7 @@ export interface RevisionHistoryItem {
     theme: "system",
     autoSaveInterval: 30,
     keyboardShortcuts: true,
+    autoSaveEnabled: true,
   };
   
   export const FOCUS_AREA_OPTIONS = [

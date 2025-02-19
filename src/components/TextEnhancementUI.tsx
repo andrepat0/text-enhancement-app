@@ -1,42 +1,59 @@
 // Components
-import { Header } from '@/components/text-enhancement/Header';
-import { InputCard } from '@/components/text-enhancement/InputCard';
-import { OutputCard } from '@/components/text-enhancement/OutputCard';
-import { EnhanceButton } from '@/components/text-enhancement/EnhanceButton';
-import { RegistrationForm } from '@/components/text-enhancement/RegistrationForm';
-import { HistoryDialog } from '@/components/text-enhancement/HistoryDialog';
+import { Header } from "@/components/text-enhancement/Header";
+import { InputCard } from "@/components/text-enhancement/InputCard";
+import { OutputCard } from "@/components/text-enhancement/OutputCard";
+import { EnhanceButton } from "@/components/text-enhancement/EnhanceButton";
+import { RegistrationForm } from "@/components/text-enhancement/RegistrationForm";
+import { HistoryDialog } from "@/components/text-enhancement/HistoryDialog";
 
 // Hooks
-import { useTextState } from '@/hooks/use-text-state';
-import { useUIState } from '@/hooks/use-ui-state';
-import { useHistoryState } from '@/hooks/use-history-state';
-import { useAutoSave } from '@/hooks/use-auto-save';
-import { useAuth } from '@/hooks/use-auth';
-import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { useTextState } from "@/hooks/use-text-state";
+import { useUIState } from "@/hooks/use-ui-state";
+import { useHistoryState } from "@/hooks/use-history-state";
+import { useAutoSave } from "@/hooks/use-auto-save";
+import { useAuth } from "@/hooks/use-auth";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 // API
-import { handleApiCall } from '@/api/text-enhancement';
-import { TooltipProvider } from '@radix-ui/react-tooltip';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Alert, AlertDescription } from './ui/alert';
-import { toast } from '@/hooks/use-toast';
-import { DEFAULT_SETTINGS, EndpointParams, GrammarCorrection, Settings } from '@/types/text-enhancement';
-import { useState, useEffect } from 'react';
+import { handleApiCall } from "@/api/text-enhancement";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
+import { AnimatePresence, motion } from "framer-motion";
+import { Alert, AlertDescription } from "./ui/alert";
+import { toast } from "@/hooks/use-toast";
+import {
+  DEFAULT_SETTINGS,
+  EndpointParams,
+  GrammarCorrection,
+  Settings,
+} from "@/types/text-enhancement";
+import { useState, useEffect } from "react";
+import { SettingsDialog } from "./text-enhancement/SettingsDialog";
 
 const TextEnhancementUI = () => {
   // Authentication state
-  const { userId, apiKey, email, setEmail, handleRegistration, error: authError } = useAuth();
+  const {
+    userId,
+    apiKey,
+    email,
+    setEmail,
+    handleRegistration,
+    error: authError,
+  } = useAuth();
 
-  const [grammarCorrections, setGrammarCorrections] = useState<GrammarCorrection[]>([]);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+
+  const [grammarCorrections, setGrammarCorrections] = useState<
+    GrammarCorrection[]
+  >([]);
   // Text state
-  const { 
-    inputText, 
-    outputText, 
-    wordCount, 
+  const {
+    inputText,
+    outputText,
+    wordCount,
     charCount,
     handleInputChange,
     setOutputText,
-    setInputText 
+    setInputText,
   } = useTextState();
 
   // UI state
@@ -48,7 +65,7 @@ const TextEnhancementUI = () => {
     setIsLoading,
     setError,
     setShowPreview,
-    setActiveEndpoint
+    setActiveEndpoint,
   } = useUIState();
 
   // History and undo/redo state
@@ -57,11 +74,12 @@ const TextEnhancementUI = () => {
     undoStack,
     redoStack,
     handleUndo,
-    setRevisionHistory
+    setRevisionHistory,
   } = useHistoryState(inputText, setInputText);
 
   // Auto-save state
-  const { autoSaveEnabled, lastSaved, handleSave, setAutoSaveEnabled } = useAutoSave(inputText);
+  const { autoSaveEnabled, lastSaved, handleSave, setAutoSaveEnabled } =
+    useAutoSave(inputText);
 
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
@@ -85,7 +103,7 @@ const TextEnhancementUI = () => {
   useKeyboardShortcuts({
     enabled: settings.keyboardShortcuts,
     onSave: handleSave,
-    onUndo: handleUndo
+    onUndo: handleUndo,
   });
 
   const handleCopy = () => {
@@ -107,32 +125,35 @@ const TextEnhancementUI = () => {
       setError,
       setOutputText,
       setRevisionHistory,
-      setGrammarCorrections
+      setGrammarCorrections,
     });
   };
 
   if (!userId) {
-    return <RegistrationForm 
-      email={email}
-      setEmail={setEmail} 
-      onRegister={handleRegistration}
-      error={authError}
-    />;
+    return (
+      <RegistrationForm
+        email={email}
+        setEmail={setEmail}
+        onRegister={handleRegistration}
+        error={authError}
+      />
+    );
   }
 
   return (
     <TooltipProvider>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8"
       >
         <div className="container mx-auto px-4 max-w-6xl">
-          <Header 
+          <Header
             activeEndpoint={activeEndpoint}
             showPreview={showPreview}
             onEndpointChange={setActiveEndpoint}
-            onPreviewToggle={setShowPreview}
+            onPreviewToggle={() => setShowPreview(!showPreview)}
+            onSettingsOpen={() => setSettingsDialogOpen(true)}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -178,6 +199,13 @@ const TextEnhancementUI = () => {
           </AnimatePresence>
 
           <HistoryDialog revisionHistory={revisionHistory} />
+
+          <SettingsDialog
+            settings={settings}
+            onSettingsChange={(newSettings) => setSettings(newSettings)}
+            open={settingsDialogOpen}
+            onOpenChange={setSettingsDialogOpen}
+          />
         </div>
       </motion.div>
     </TooltipProvider>
