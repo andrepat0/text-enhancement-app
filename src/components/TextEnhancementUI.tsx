@@ -16,7 +16,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import config from "@/config";
+import { GrammarOutput } from './grammar-output';
 
+// Types
 interface RevisionHistoryItem {
   timestamp: string;
   text: string;
@@ -46,85 +48,136 @@ interface EndpointParams {
   };
 }
 
+interface GrammarCorrection {
+  correction: string;
+  explanation: string;
+  original?: string;
+}
+
+interface Settings {
+  tone: string;
+  preserveStyle: boolean;
+  maxLength: number;
+  targetAudience: string;
+  domainContext: string;
+  focusAreas: string[];
+  explainChanges: boolean;
+  correctionStyle: string;
+  locale: string;
+  formalityLevel: string;
+  style: string;
+  maintainContext: boolean;
+  replyFormat: string;
+  keyPoints: string[];
+  fontSize: number;
+  highContrast: boolean;
+  theme: string;
+  autoSaveInterval: number;
+  keyboardShortcuts: boolean;
+}
+
+const DEFAULT_SETTINGS: Settings = {
+  tone: "professional",
+  preserveStyle: true,
+  maxLength: 1000,
+  targetAudience: "general",
+  domainContext: "",
+  focusAreas: ["punctuation"],
+  explainChanges: true,
+  correctionStyle: "detailed",
+  locale: "en-US",
+  formalityLevel: "standard",
+  style: "professional",
+  maintainContext: true,
+  replyFormat: "standard",
+  keyPoints: [],
+  fontSize: 16,
+  highContrast: false,
+  theme: "system",
+  autoSaveInterval: 30,
+  keyboardShortcuts: true,
+};
+
+const FOCUS_AREA_OPTIONS = [
+  { id: "grammar", label: "Grammar" },
+  { id: "spelling", label: "Spelling" },
+  { id: "punctuation", label: "Punctuation" },
+  { id: "style", label: "Style" },
+  { id: "clarity", label: "Clarity" },
+];
+
 const TextEnhancementUI = () => {
+  // Authentication state
   const [userId, setUserId] = useState(() => localStorage.getItem("userId") || "");
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("apiKey") || "");
+  const [email, setEmail] = useState("");
+
+  // Text state
   const [inputText, setInputText] = useState("");
   const [outputText, setOutputText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [revisionHistory, setRevisionHistory] = useState<RevisionHistoryItem[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
-  const [activeEndpoint, setActiveEndpoint] = useState<keyof EndpointParams>("craft-tone");
-  const [email, setEmail] = useState("");
-  const [undoStack, setUndoStack] = useState<string[]>([]);
-  const [redoStack, setRedoStack] = useState<string[]>([]);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [wordCount, setWordCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
 
-  const [settings, setSettings] = useState({
-    tone: "professional",
-    preserveStyle: true,
-    maxLength: 1000,
-    targetAudience: "general",
-    domainContext: "",
-    focusAreas: ["punctuation"],
-    explainChanges: true,
-    correctionStyle: "detailed",
-    locale: "en-US",
-    formalityLevel: "standard",
-    style: "professional",
-    maintainContext: true,
-    replyFormat: "standard",
-    keyPoints: [] as string[],
-    fontSize: 16,
-    highContrast: false,
-    theme: "system",
-    autoSaveInterval: 30,
-    keyboardShortcuts: true,
-  });
+  // UI state
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [activeEndpoint, setActiveEndpoint] = useState<keyof EndpointParams>("craft-tone");
+  
+  // History and undo/redo state
+  const [revisionHistory, setRevisionHistory] = useState<RevisionHistoryItem[]>([]);
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
+  
+  // Auto-save state
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  
+  // Grammar state
+  const [grammarCorrections, setGrammarCorrections] = useState<GrammarCorrection[]>([]);
+  
+  // Settings state
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
-  // Auto-save functionality
+  // Auto-save effect
   useEffect(() => {
-    if (autoSaveEnabled && inputText) {
-      const timer = setTimeout(() => {
-        localStorage.setItem("draftText", inputText);
-        setLastSaved(new Date());
-        toast({
-          title: "Draft saved",
-          description: "Your work has been automatically saved",
-        });
-      }, settings.autoSaveInterval * 1000);
+    if (!autoSaveEnabled || !inputText) return;
 
-      return () => clearTimeout(timer);
-    }
+    const timer = setTimeout(() => {
+      localStorage.setItem("draftText", inputText);
+      setLastSaved(new Date());
+      toast({
+        title: "Draft saved",
+        description: "Your work has been automatically saved",
+      });
+    }, settings.autoSaveInterval * 1000);
+
+    return () => clearTimeout(timer);
   }, [inputText, autoSaveEnabled, settings.autoSaveInterval]);
 
-  // Word and character count
+  // Word and character count effect
   useEffect(() => {
     setWordCount(inputText.trim().split(/\s+/).length);
     setCharCount(inputText.length);
   }, [inputText]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts effect
   useEffect(() => {
-    if (settings.keyboardShortcuts) {
-      const handleKeyPress = (e: KeyboardEvent) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-          e.preventDefault();
-          handleSave();
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-          e.preventDefault();
-          handleUndo();
-        }
-      };
+    if (!settings.keyboardShortcuts) return;
 
-      window.addEventListener('keydown', handleKeyPress);
-      return () => window.removeEventListener('keydown', handleKeyPress);
-    }
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, [settings.keyboardShortcuts]);
 
   const handleInputChange = (text: string) => {
@@ -134,12 +187,12 @@ const TextEnhancementUI = () => {
   };
 
   const handleUndo = () => {
-    if (undoStack.length > 0) {
-      const previousText = undoStack[undoStack.length - 1];
-      setRedoStack([...redoStack, inputText]);
-      setInputText(previousText);
-      setUndoStack(undoStack.slice(0, -1));
-    }
+    if (undoStack.length === 0) return;
+    
+    const previousText = undoStack[undoStack.length - 1];
+    setRedoStack([...redoStack, inputText]);
+    setInputText(previousText);
+    setUndoStack(undoStack.slice(0, -1));
   };
 
   const handleSave = () => {
@@ -158,14 +211,6 @@ const TextEnhancementUI = () => {
       description: "The enhanced text has been copied",
     });
   };
-
-  const focusAreaOptions = [
-    { id: "grammar", label: "Grammar" },
-    { id: "spelling", label: "Spelling" },
-    { id: "punctuation", label: "Punctuation" },
-    { id: "style", label: "Style" },
-    { id: "clarity", label: "Clarity" },
-  ];
 
   const handleApiCall = async () => {
     if (!inputText) {
@@ -218,29 +263,36 @@ const TextEnhancementUI = () => {
       );
 
       const data = await response.json();
-      if (response.ok) {
-        setOutputText(data.result);
-        if (data.fixes) {
-          setRevisionHistory((prev) => [
-            {
-              timestamp: new Date().toISOString(),
-              text: data.result,
-              changes: data.fixes,
-            },
-            ...prev,
-          ]);
-        }
-        toast({
-          title: "Success",
-          description: "Text enhanced successfully",
-        });
-      } else {
+      
+      if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem("userId");
           window.location.reload();
         }
         throw new Error(data.error || "Failed to process text");
       }
+
+      setOutputText(data.result);
+      
+      if (data.fixes) {
+        setRevisionHistory((prev) => [
+          {
+            timestamp: new Date().toISOString(),
+            text: data.result,
+            changes: data.fixes,
+          },
+          ...prev,
+        ]);
+      }
+      
+      if (activeEndpoint === "improve-grammar" && data.corrections) {
+        setGrammarCorrections(data.corrections);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Text enhanced successfully",
+      });
     } catch (err) {
       const error = err as Error;
       setError(`API call failed: ${error.message}`);
@@ -251,6 +303,36 @@ const TextEnhancementUI = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRegistration = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:8000/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || "Registration failed");
+        return;
+      }
+
+      const data = await response.json();
+      setUserId(data.user_id);
+      setApiKey(data.api_key);
+      localStorage.setItem("userId", data.user_id);
+      localStorage.setItem("apiKey", data.api_key);
+      window.location.reload();
+    } catch {
+      setError("Failed to register");
     }
   };
 
@@ -271,38 +353,7 @@ const TextEnhancementUI = () => {
             />
             <Button
               variant="outline"
-              onClick={async () => {
-                try {
-                  const response = await fetch(
-                    "http://localhost:8000/api/auth/register",
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        email: email,
-                      }),
-                    }
-                  );
-
-                  if (response.ok) {
-                    const data = await response.json();
-                    setUserId(data.user_id);
-                    setApiKey(data.api_key);
-                    console.log(data.user_id);
-                    console.log(data.api_key);
-                    localStorage.setItem("userId", data.user_id);
-                    localStorage.setItem("apiKey", data.api_key);
-                    window.location.reload();
-                  } else {
-                    const data = await response.json();
-                    setError(data.error || "Registration failed");
-                  }
-                } catch {
-                  setError("Failed to register");
-                }
-              }}
+              onClick={handleRegistration}
             >
               Start
             </Button>
@@ -332,7 +383,7 @@ const TextEnhancementUI = () => {
             >
               <Wand2 className="w-8 h-8 text-purple-600" />
               <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
-                Text Enhancement Suite
+                Better Text
               </h1>
             </motion.div>
 
@@ -396,9 +447,6 @@ const TextEnhancementUI = () => {
                     <span>|</span>
                     <span>{charCount} characters</span>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {/* ... (existing mode-specific controls remain the same) ... */}
                 </div>
               </CardHeader>
               <CardContent className="p-4">
@@ -480,12 +528,16 @@ const TextEnhancementUI = () => {
                 </div>
               </CardHeader>
               <CardContent className="p-4">
-                <textarea
-                  value={outputText}
-                  readOnly
-                  className="w-full p-4 border rounded-lg h-64 bg-gray-50 dark:bg-gray-900 dark:border-gray-700 resize-none"
-                  style={{ fontSize: `${settings.fontSize}px` }}
-                />
+                {activeEndpoint === "improve-grammar" && grammarCorrections.length > 0 ? (
+                  <GrammarOutput output={outputText} corrections={grammarCorrections} />
+                ) : (
+                  <textarea
+                    value={outputText}
+                    readOnly
+                    className="w-full p-4 border rounded-lg h-64 bg-gray-50 dark:bg-gray-900 dark:border-gray-700 resize-none"
+                    style={{ fontSize: `${settings.fontSize}px` }}
+                  />
+                )}
               </CardContent>
             </Card>
           </div>
