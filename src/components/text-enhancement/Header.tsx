@@ -1,21 +1,39 @@
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Settings2 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Eye, Settings2, Wand2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface HeaderProps {
   activeEndpoint: string;
   showPreview: boolean;
   onEndpointChange: (value: string) => void;
   onPreviewToggle: () => void;
+  onSettingsOpen: () => void;
 }
 
-export const Header = ({ activeEndpoint, showPreview, onEndpointChange, onPreviewToggle }: HeaderProps) => {
+export const Header = ({
+  activeEndpoint,
+  showPreview,
+  onEndpointChange,
+  onPreviewToggle,
+  onSettingsOpen,
+}: HeaderProps) => {
   return (
     <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div className="flex items-center gap-3">
+        <Wand2 className="w-8 h-8 text-purple-600" />
         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
-          Text Enhancement Suite
+          Better Text
         </h1>
       </div>
 
@@ -48,7 +66,11 @@ export const Header = ({ activeEndpoint, showPreview, onEndpointChange, onPrevie
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="outline" size="sm" onClick={() => (document.getElementById("settingsDialog") as HTMLDialogElement)?.showModal()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSettingsOpen}
+            >
               <Settings2 className="w-4 h-4 mr-2" />
               Settings
             </Button>
