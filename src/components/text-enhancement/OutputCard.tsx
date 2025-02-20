@@ -1,7 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, History } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { GrammarOutput } from "./GrammarOutput";
 import { GrammarCorrection, Settings } from "@/types/text-enhancement";
 
@@ -26,13 +30,27 @@ export const OutputCard = ({
     <Card className="border-0 shadow-lg bg-white dark:bg-gray-800">
       <CardHeader className="border-b border-gray-100 dark:border-gray-700">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-xl font-semibold">
-            {showPreview ? "Live Preview" : "Enhanced Output"}
-          </CardTitle>
+          <div className="flex gap-2 items-start">
+            <CardTitle className="text-xl font-semibold">
+              {showPreview ? "Live Preview" : "Enhanced Output"}
+            </CardTitle>
+            {activeEndpoint !== "improve-grammar" && (
+              <div className="flex gap-2 items-start">
+                <div className="px-2 py-1 text-sm rounded-md bg-gray-100 dark:bg-gray-700">
+                  {settings.tone.charAt(0).toUpperCase() + settings.tone.slice(1)}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={onCopy} disabled={!outputText}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onCopy}
+                  disabled={!outputText}
+                >
                   <Copy className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
@@ -41,7 +59,17 @@ export const OutputCard = ({
             {!showPreview && activeEndpoint === "improve-grammar" && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={() => (document.getElementById("historyDialog") as HTMLDialogElement)?.showModal()}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      (
+                        document.getElementById(
+                          "historyDialog"
+                        ) as HTMLDialogElement
+                      )?.showModal()
+                    }
+                  >
                     <History className="w-4 h-4 mr-2" />
                     View Changes
                   </Button>
@@ -53,7 +81,8 @@ export const OutputCard = ({
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        {activeEndpoint === "improve-grammar" && grammarCorrections.length > 0 ? (
+        {activeEndpoint === "improve-grammar" &&
+        grammarCorrections.length > 0 ? (
           <GrammarOutput output={outputText} corrections={grammarCorrections} />
         ) : (
           <textarea

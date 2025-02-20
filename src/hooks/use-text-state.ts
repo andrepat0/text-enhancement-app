@@ -17,5 +17,6 @@ export const useTextState = () => {
     charCount,
     handleInputChange,
     setOutputText,
+    setInputText,
   };
 };

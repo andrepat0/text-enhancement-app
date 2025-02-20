@@ -45,6 +45,7 @@ const TextEnhancementUI = () => {
   const [grammarCorrections, setGrammarCorrections] = useState<
     GrammarCorrection[]
   >([]);
+
   // Text state
   const {
     inputText,
@@ -69,17 +70,11 @@ const TextEnhancementUI = () => {
   } = useUIState();
 
   // History and undo/redo state
-  const {
-    revisionHistory,
-    undoStack,
-    redoStack,
-    handleUndo,
-    setRevisionHistory,
-  } = useHistoryState(inputText, setInputText);
+  const { revisionHistory, undoStack, handleUndo, setRevisionHistory } =
+    useHistoryState(inputText, setInputText);
 
   // Auto-save state
-  const { autoSaveEnabled, lastSaved, handleSave, setAutoSaveEnabled } =
-    useAutoSave(inputText);
+  const { handleSave } = useAutoSave(inputText);
 
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
@@ -89,15 +84,8 @@ const TextEnhancementUI = () => {
     if (savedDraft) {
       setInputText(savedDraft);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Handle redo functionality
-  const handleRedo = () => {
-    if (redoStack.length > 0) {
-      const nextText = redoStack[redoStack.length - 1];
-      setInputText(nextText);
-    }
-  };
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
